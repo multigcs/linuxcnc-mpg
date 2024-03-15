@@ -5,6 +5,11 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
 
+#include <esp_now.h>
+#include <esp_wifi.h>
+#include <WiFi.h>
+
+
 #define ADC 14
 #define TFT_DC 33
 #define TFT_CS 34
@@ -18,6 +23,10 @@ ESPRotary r1;
 ESPRotary r2;
 ESPRotary r3;
 ESPRotary r4;
+
+uint8_t receiverAddress[] = {0x30, 0xAE, 0xA4, 0x7B, 0x79, 0x90};
+uint8_t myAddress[] = {0x94, 0x3C, 0xC6, 0x33, 0x68, 0x98};
+esp_now_peer_info_t peerInfo;
 
 hw_timer_t *timer = NULL;
 
@@ -40,6 +49,7 @@ struct rx_data_t {
     int16_t ow_feed;
     int16_t ow_rapid;
     int16_t ow_spindle;
+    uint16_t leds;
 };
 const int rx_data_t_size = sizeof(rx_data_t);
 
@@ -50,11 +60,11 @@ union rx_Data_t{
 rx_Data_t rx_data;  
 
 struct tx_data_t {
-    int32_t jog[6];
+    int16_t jog;
     int16_t ow_feed;
     int16_t ow_rapid;
     int16_t ow_spindle;
-    uint16_t buttons;
+    uint32_t buttons;
 };
 const int tx_data_t_size = sizeof(tx_data_t);
 
@@ -70,16 +80,25 @@ tx_Data_t tx_data;
 
 
 uint8_t update = 0;
-uint8_t axis_selected = 0;
 
 
 void IRAM_ATTR handleLoop() {
-  r1.loop();
-  r2.loop();
-  r3.loop();
-  r4.loop();
+    r1.loop();
+    r2.loop();
+    r3.loop();
+    r4.loop();
 }
 
+
+void messageReceived(const uint8_t* macAddr, const uint8_t* incomingData, int len) {
+    memcpy(&rx_data.data, incomingData, sizeof(rx_data.data));
+
+    update_stats();
+
+    esp_err_t result = esp_now_send(receiverAddress, (uint8_t *) &tx_data.data, sizeof(tx_data.data));
+    if (result != ESP_OK) {
+    }
+}
 
 
 void setup() {
@@ -96,7 +115,6 @@ void setup() {
     pinMode(row_pins[2], INPUT_PULLUP);
     pinMode(row_pins[3], INPUT);
 
-
     fspi.begin(36, 37, 35, TFT_CS);
     tft.begin(78000000);
 
@@ -104,10 +122,8 @@ void setup() {
     tft.setRotation(3);
     tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
 
-
     tft.drawRect(1, 1, 202, 6 * PSTEP + 5 + 2, ILI9341_WHITE);
     tft.drawRect(2, 2, 200, 6 * PSTEP + 5, ILI9341_LIGHTGREY);
-
 
     tft.setTextSize(3);
     tft.setTextColor(ILI9341_RED, ILI9341_BLACK);
@@ -128,10 +144,6 @@ void setup() {
     tft.print("C: ");
     tft.setCursor(10, 10 + 6 * PSTEP);
 
-    for (n = 0; n < 6; n++) {
-        tx_data.values.jog[n] = 0;
-    }
-
     r1.begin(13, 12, CLICKS_PER_STEP);
     r2.begin(16, 17, CLICKS_PER_STEP);
     r3.begin(18, 21, CLICKS_PER_STEP);
@@ -140,6 +152,28 @@ void setup() {
     timerAttachInterrupt(timer, &handleLoop, true);
     timerAlarmWrite(timer, 100, true);
     timerAlarmEnable(timer);
+
+
+
+    WiFi.mode(WIFI_STA);
+    esp_wifi_set_mac(WIFI_IF_STA, myAddress);
+
+    if (esp_now_init() == ESP_OK) {
+        //Serial.println("ESPNow Init success");
+    } else {
+        //Serial.println("ESPNow Init fail");
+        return;
+    }
+    esp_now_register_recv_cb(messageReceived);
+
+    memcpy(peerInfo.peer_addr, receiverAddress, 6);
+    peerInfo.channel = 0;
+    peerInfo.encrypt = false;
+    if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+        //Serial.println("Failed to add peer");
+        return;
+    }
+
 }
 
 
@@ -158,18 +192,57 @@ void matrix_read() {
         sw_stat[1][sw] = digitalRead(row_pins[1]);
         sw_stat[2][sw] = digitalRead(row_pins[2]);
     }
+
+
     for (n = 0; n < 6; n++) {
         pinMode(col_pins[n], INPUT);
-        //digitalWrite(col_pins[n], 1);
     }
-    pinMode(col_pins[axis_selected], OUTPUT);
-    digitalWrite(col_pins[axis_selected], 0);
     pinMode(row_pins[3], OUTPUT);
     digitalWrite(row_pins[3], 1);
+    
+    for (n = 0; n < 6; n++) {
+        if ((rx_data.values.leds & (1<<n)) != 0) {
+            pinMode(col_pins[n], OUTPUT);
+            digitalWrite(col_pins[n], 0);
+        } else {
+            pinMode(col_pins[n], INPUT);
+        }
+    }
 }
 
 
+void update_stats() {
+    uint8_t n = 0;
+    for (n = 0; n < 6; n++) {
+        if (rx_data.values.pos[n] > 99999.0) {
+            rx_data.values.pos[n] = 99999.0;
+        }
+        if (rx_data.values.pos[n] > 99999.0) {
+            rx_data.values.pos[n] = 99999.0;
+        }
+    }
 
+    tx_data.values.jog = r1.getPosition();
+    r1.resetPosition(0);
+
+
+    tx_data.values.buttons = 0;
+    for (n = 0; n < 6; n++) {
+        if (sw_stat[0][n] == 0) {
+            tx_data.values.buttons |= (1<<n);
+        }
+    }
+    for (n = 0; n < 6; n++) {
+        if (sw_stat[1][n] == 0) {
+            tx_data.values.buttons |= (1<<(n+6));
+        }
+    }
+    for (n = 0; n < 6; n++) {
+        if (sw_stat[2][n] == 0) {
+            tx_data.values.buttons |= (1<<(n+12));
+        }
+    }
+}
 
 
 
@@ -183,21 +256,6 @@ void loop() {
     tx_data.values.ow_rapid = r3.getPosition();
     tx_data.values.ow_spindle = r4.getPosition();
 
-    if (sw_stat[1][0] == 0) {
-        axis_selected = 0;
-    } else if (sw_stat[1][1] == 0) {
-        axis_selected = 1;
-    } else if (sw_stat[1][2] == 0) {
-        axis_selected = 2;
-    } else if (sw_stat[1][3] == 0) {
-        axis_selected = 3;
-    } else if (sw_stat[1][4] == 0) {
-        axis_selected = 4;
-    } else if (sw_stat[1][5] == 0) {
-        axis_selected = 5;
-    }
-
-
     uint8_t rx_buffer[rx_data_t_size];
     uint8_t tx_buffer[tx_data_t_size];
     uint8_t rlen = Serial.readBytes(rx_buffer, rx_data_t_size);
@@ -207,33 +265,7 @@ void loop() {
             rx_data.data[n] = rx_buffer[n];
         }
 
-        for (n = 0; n < 6; n++) {
-            if (rx_data.values.pos[n] > 99999.0) {
-                rx_data.values.pos[n] = 99999.0;
-            }
-            if (rx_data.values.pos[n] > 99999.0) {
-                rx_data.values.pos[n] = 99999.0;
-            }
-        }
-
-        if (axis_selected >= 0 && axis_selected < 6) {
-           tx_data.values.jog[axis_selected] += r1.getPosition();
-        }
-        r1.resetPosition(0);
-
-
-        tx_data.values.buttons = 0;
-        for (n = 0; n < 6; n++) {
-            if (sw_stat[0][n] == 0) {
-                tx_data.values.buttons |= (1<<n);
-            }
-        }
-        for (n = 0; n < 6; n++) {
-            if (sw_stat[2][n] == 0) {
-                tx_data.values.buttons |= (1<<(n+6));
-            }
-        }
-
+        update_stats();
 
         for (n = 0; n < tx_data_t_size; n++) {
             tx_buffer[n] = tx_data.data[n];
@@ -305,7 +337,7 @@ void loop() {
         tft.setTextSize(3);
         tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
         tft.setCursor(230, 5 + nr * 45 + 20);
-        sprintf(tmp_str, "%3i%%", 0);
+        sprintf(tmp_str, "%3i%%", rx_data.values.leds);
         tft.print(tmp_str);
     }
 

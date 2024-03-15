@@ -6,10 +6,10 @@ work in progress !!
 
 
 ## TODO
-- [ ] espnow support (incl. dongle/bridge)
-- [ ] adding toggle support to the buttons (incl oneshot signals)
-- [ ] controling LED's and axis switching from python
-- [ ] transmitting only the diff of the encoder's
+- [x] espnow support (incl. dongle/bridge)
+- [x] adding toggle support to the buttons (incl oneshot signals)
+- [x] controling LED's and axis switching from python
+- [x] transmitting only the diff of the encoder's
 - [ ] interception of connection problems
 - [ ] full hal examples
 
@@ -40,7 +40,7 @@ pio run --target upload
 ## Install Hal-Component
 ```
 sudo cp linuxcnc/mpg.py /usr/local/bin/mpg
-chmod 755 /usr/local/bin/mpg
+sudo chmod 755 /usr/local/bin/mpg
 
 ``` 
 
