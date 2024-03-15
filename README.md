@@ -311,7 +311,7 @@ this is for LinuxCNC >= 2.9
 
 ### example1
 ``` 
-loadusr mpg -d /dev/ttyUSB0
+loadusr mpg -d /dev/ttyACM0 -s
 
 # MPG
 #net iocontrol_0_emc-enable-in <= mpg.button.estop-not
@@ -374,6 +374,7 @@ net override-spindle-value => mpg.override.spindle.value
 ### example2
 
 ```
+loadusr mpg -d /dev/ttyACM0 -s
 
 #net rios.iocontrol_0_emc-enable-in <= mpg.button.estop-not
 #net rios.iocontrol_0_emc-enable-in => iocontrol.0.emc-enable-in
