@@ -68,6 +68,8 @@ while True:
         for key, value in h.items():
             print(key, value)
         print("-------------")
+
+        h[f"axis.x.pos"] += 0.1
         
 
     # serial sync
