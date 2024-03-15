@@ -8,6 +8,7 @@ work in progress !!
 ## TODO
 - [ ] espnow support (incl. dongle/bridge)
 - [ ] transmitting only the diff of the encoder's
+- [ ] interception of connection problems
 - [ ] full hal examples
 
 
