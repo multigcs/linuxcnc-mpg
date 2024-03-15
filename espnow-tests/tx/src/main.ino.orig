@@ -1,0 +1,79 @@
+// poe 
+
+#include <esp_now.h>
+#include <esp_wifi.h>
+#include <WiFi.h>
+
+uint8_t receiverAddress[] = {0x94, 0x3C, 0xC6, 0x33, 0x68, 0x98};
+
+uint8_t myAddress[] = {0x30, 0xAE, 0xA4, 0x7B, 0x79, 0x90};
+
+
+esp_now_peer_info_t peerInfo;
+typedef struct messageToBeSent {
+    char text[64];
+    int intVal;
+    float floatVal;
+} messageToBeSent;
+typedef struct receivedMessage {
+    char text[64];
+    long runTime;
+} receivedMessage;
+messageToBeSent myMessageToBeSent; 
+receivedMessage myReceivedMessage; 
+void messageSent(const uint8_t *macAddr, esp_now_send_status_t status) {
+    Serial.print("Send status: ");
+    if(status == ESP_NOW_SEND_SUCCESS){
+        Serial.println("Success");
+    }
+    else{
+        Serial.println("Error");
+    }
+}
+void messageReceived(const uint8_t* macAddr, const uint8_t* incomingData, int len){
+    memcpy(&myReceivedMessage, incomingData, sizeof(myReceivedMessage));
+    Serial.printf("Incoming Message from: %02X:%02X:%02X:%02X:%02X:%02X \n\r", 
+            macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
+    Serial.print("Message: ");
+    Serial.println(myReceivedMessage.text);
+    Serial.print("RunTime [s]: ");
+    Serial.println(myReceivedMessage.runTime);
+    Serial.println();
+}
+void setup(){
+    Serial.begin(115200);
+    // delay(1000); // uncomment if your serial monitor is empty
+    WiFi.mode(WIFI_STA);
+    esp_wifi_set_mac(WIFI_IF_STA, myAddress);
+
+    
+    if (esp_now_init() == ESP_OK) {
+        Serial.println("ESPNow Init success");
+    }
+    else {
+        Serial.println("ESPNow Init fail");
+        return;
+    }
+    
+    esp_now_register_send_cb(messageSent);  
+    esp_now_register_recv_cb(messageReceived); 
+    memcpy(peerInfo.peer_addr, receiverAddress, 6);
+    peerInfo.channel = 0;
+    peerInfo.encrypt = false;
+    if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+        Serial.println("Failed to add peer");
+        return;
+    }
+}
+ 
+void loop(){
+    char textMsg[] = "Hi, here's my data for you: ";
+    memcpy(&myMessageToBeSent.text, textMsg, sizeof(textMsg));
+    myMessageToBeSent.intVal = 4242;
+    myMessageToBeSent.floatVal = 42.42;
+    esp_err_t result = esp_now_send(receiverAddress, (uint8_t *) &myMessageToBeSent, sizeof(myMessageToBeSent));
+    if (result != ESP_OK) {
+        Serial.println("Sending error");
+    }
+    delay(5000);
+}
