@@ -2,6 +2,9 @@
 
 work in progress !!
 
+https://www.youtube.com/watch?v=mJ1qc-PS2gQ
+
+[![DIY-MPG for LinuxCNC - wireless](https://img.youtube.com/vi/mJ1qc-PS2gQ/0.jpg)](https://www.youtube.com/watch?v=mJ1qc-PS2gQ "DIY-MPG for LinuxCNC - wireless")
 [![DIY-MPG for LinuxCNC - hal tests](https://img.youtube.com/vi/hYcYCV4b4o4/0.jpg)](https://www.youtube.com/watch?v=hYcYCV4b4o4 "DIY-MPG for LinuxCNC - hal tests")
 
 
