@@ -86,7 +86,6 @@ void setup() {
     uint8_t n = 0;
     Serial.begin(115200);
     Serial.setTimeout(10);
-    pinMode(15, OUTPUT);
 
     for (n = 0; n < 6; n++) {
         pinMode(col_pins[n], OUTPUT);
