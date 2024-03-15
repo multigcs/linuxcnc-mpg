@@ -13,7 +13,7 @@ https://www.youtube.com/watch?v=mJ1qc-PS2gQ
 - [x] adding toggle support to the buttons (incl oneshot signals)
 - [x] controling LED's and axis switching from python
 - [x] transmitting only the diff of the encoder's
-- [ ] interception of connection problems
+- [x] interception of connection problems
 - [ ] adding LIPO with wireless and USB charger
 - [ ] full hal examples
 
