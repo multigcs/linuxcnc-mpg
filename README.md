@@ -2,20 +2,42 @@
 
 work in progress !!
 
-
 [![DIY-MPG for LinuxCNC - hal tests](https://img.youtube.com/vi/hYcYCV4b4o4/0.jpg)](https://www.youtube.com/watch?v=hYcYCV4b4o4 "DIY-MPG for LinuxCNC - hal tests")
 
 
 
-## install Hal-Component
-``` 
+## BOM
+
+| number | name | link |
+| --- | --- | --- |
+| 1 | S2 Mini V1.0.0 ESP32-S2 Modul | https://www.amazon.de/dp/B0CJHWD986 |
+| 1 | 2.4Zoll TFT-Display (ILI9341) | https://www.amazon.de/dp/B0CC8V17GS |
+| 1 | Emergency stop switch | https://www.amazon.de/dp/B08ZS8HZYV |
+| 1 | rotary encoder | https://www.amazon.de/dp/B07MFVK8QT |
+| 3 | rotary encoder with push button | https://www.amazon.de/dp/B096NYWY2M |
+| 6 | 3mm LED | https://www.amazon.de/dp/B07Q1813PN |
+| 14 | 12x12 momentary switch | https://www.amazon.de/dp/B07JBXS6RC |
+| 1 | Resistor ~680Ohm | |
+
+
+
+## Compile and Load Firmware
+you need a working platformio installation (https://platformio.org/install)
+```
+pio run --target upload
+```
+
+
+## Install Hal-Component
+```
 sudo cp mpg.py /usr/local/bin/mpg
 chmod 755 /usr/local/bin/mpg
 
 ``` 
 
 
-## Hal-Example
+## Hal-Configuration (example)
+this is for LinuxCNC >= 2.9
 ``` 
 loadusr mpg
 
