@@ -2,15 +2,20 @@
 #
 #
 
+import argparse
 import time
 import serial
-import hal
 from struct import pack, unpack
 
-# setup
-device = "/dev/ttyACM0"
-baud = 115200
+# arguments
+parser = argparse.ArgumentParser()
+parser.add_argument("--device", "-d", help="device", type=str, default="/dev/ttyACM0")
+parser.add_argument("--baud", "-b", help="baudrate", type=int, default=115200)
+parser.add_argument("--test", "-t", help="test mode / no hal needed", default=False, action="store_true")
+args = parser.parse_args()
 
+
+# setup
 RX_SIZE = 32
 AXIS = ("x", "y", "z", "a", "b", "c")
 OVERWRITES = ("feed", "rapid" , "spindle")
@@ -18,21 +23,34 @@ BUTTON_NAMES = ("01", "02", "03", "04", "05", "06", "01b", "enc01", "enc02", "en
 
 
 # create hal pins
-h = hal.component("mpg")
-for axis in AXIS:
-    h.newpin(f"axis.{axis}.pos", hal.HAL_FLOAT, hal.HAL_IN)
-    h.newpin(f"axis.{axis}.jog-counts", hal.HAL_S32, hal.HAL_OUT)
-for name in OVERWRITES:
-    h.newpin(f"override.{name}.value", hal.HAL_FLOAT, hal.HAL_IN)
-    h.newpin(f"override.{name}.counts", hal.HAL_S32, hal.HAL_OUT)
-for name in BUTTON_NAMES:
-    h.newpin(f"button.{name}", hal.HAL_BIT, hal.HAL_OUT)
-    h.newpin(f"button.{name}-not", hal.HAL_BIT, hal.HAL_OUT)
-h.ready()
+if not args.test:
+    import hal
+    h = hal.component("mpg")
+    for axis in AXIS:
+        h.newpin(f"axis.{axis}.pos", hal.HAL_FLOAT, hal.HAL_IN)
+        h.newpin(f"axis.{axis}.jog-counts", hal.HAL_S32, hal.HAL_OUT)
+    for name in OVERWRITES:
+        h.newpin(f"override.{name}.value", hal.HAL_FLOAT, hal.HAL_IN)
+        h.newpin(f"override.{name}.counts", hal.HAL_S32, hal.HAL_OUT)
+    for name in BUTTON_NAMES:
+        h.newpin(f"button.{name}", hal.HAL_BIT, hal.HAL_OUT)
+        h.newpin(f"button.{name}-not", hal.HAL_BIT, hal.HAL_OUT)
+    h.ready()
+else:
+    h = {}
+    for axis in AXIS:
+        h[f"axis.{axis}.pos"] = 10.0
+        h[f"axis.{axis}.jog-counts"] = 20
+    for name in OVERWRITES:
+        h[f"override.{name}.value"] = 30
+        h[f"override.{name}.counts"] = 40
+    for name in BUTTON_NAMES:
+        h[f"button.{name}"] = False
+        h[f"button.{name}-not"] = True
 
 
 # init serial
-ser = serial.Serial(device, baud, timeout=0.01)
+ser = serial.Serial(args.device, args.baud, timeout=0.01)
 while ser.inWaiting() > 0:
     ser.read(1)
 
@@ -66,6 +84,13 @@ while True:
             else:
                 h[f"button.{name}"] = True
             h[f"button.{name}-not"] = not h[f"button.{name}"]
+
+        if args.test:
+            for key, value in h.items():
+                print(key, value)
+            print("-------------")
+            h[f"axis.x.pos"] += 0.1
+
 
     # serial sync
     while ser.inWaiting() > 0:
