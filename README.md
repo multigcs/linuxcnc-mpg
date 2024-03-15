@@ -45,7 +45,7 @@ chmod 755 /usr/local/bin/mpg
 ## Hal-Configuration (example)
 this is for LinuxCNC >= 2.9
 ``` 
-loadusr mpg
+loadusr mpg -d /dev/ttyUSB0
 
 # MPG
 #net iocontrol_0_emc-enable-in <= mpg.button.estop-not
