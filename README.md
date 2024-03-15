@@ -11,6 +11,7 @@ work in progress !!
 - [x] controling LED's and axis switching from python
 - [x] transmitting only the diff of the encoder's
 - [ ] interception of connection problems
+- [ ] adding LIPO with wireless and USB charger
 - [ ] full hal examples
 
 
