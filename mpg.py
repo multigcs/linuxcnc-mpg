@@ -47,6 +47,10 @@ else:
     for name in BUTTON_NAMES:
         h[f"button.{name}"] = False
         h[f"button.{name}-not"] = True
+        h[f"button.{name}-toggle"] = False
+        h[f"button.{name}-toggle-not"] = True
+        h[f"button.{name}-toggle-on"] = False
+        h[f"button.{name}-toggle-off"] = False
 
 
 # init serial
@@ -79,11 +83,21 @@ while True:
         buttons = unpack("<H", bytes(msgFromServer[bpos:bpos+2]))[0]
         bpos += 2
         for num, name in enumerate(BUTTON_NAMES):
+            h[f"button.{name}-toggle-on"] = False
+            h[f"button.{name}-toggle-off"] = False
             if buttons & (1<<num) == 0:
-                h[f"button.{name}"] = False
+                if h[f"button.{name}"]:
+                    h[f"button.{name}"] = False
+                    h[f"button.{name}-toggle"] = not h[f"button.{name}-toggle"]
+                    h[f"button.{name}-toggle-off"] = True
             else:
-                h[f"button.{name}"] = True
+                if not h[f"button.{name}"]:
+                    h[f"button.{name}"] = True
+                    h[f"button.{name}-toggle"] = not h[f"button.{name}-toggle"]
+                    h[f"button.{name}-toggle-on"] = True
             h[f"button.{name}-not"] = not h[f"button.{name}"]
+            h[f"button.{name}-toggle-not"] = not h[f"button.{name}-toggle"]
+
 
         if args.test:
             for key, value in h.items():

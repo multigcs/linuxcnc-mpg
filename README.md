@@ -7,6 +7,8 @@ work in progress !!
 
 ## TODO
 - [ ] espnow support (incl. dongle/bridge)
+- [ ] adding toggle support to the buttons (incl oneshot signals)
+- [ ] controling LED's and axis switching from python
 - [ ] transmitting only the diff of the encoder's
 - [ ] interception of connection problems
 - [ ] full hal examples
