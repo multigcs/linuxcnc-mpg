@@ -5,13 +5,11 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
 
-
 #define ADC 14
-
-
 #define TFT_DC 33
 #define TFT_CS 34
 #define CLICKS_PER_STEP 4
+#define PSTEP 32
 
 SPIClass fspi = SPIClass(FSPI);
 Adafruit_ILI9341 tft = Adafruit_ILI9341(&fspi, TFT_DC, TFT_CS);
@@ -22,6 +20,17 @@ ESPRotary r3;
 ESPRotary r4;
 
 hw_timer_t *timer = NULL;
+
+int col_pins[6] = {10, 8, 6, 4, 2, 1};
+int row_pins[4] = {7, 9, 5, 11};
+
+uint8_t sw_stat[3][6] = {
+    {0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0},
+};
+
+int32_t enc_diff[4] = {0, 0, 0, 0};
 
 uint8_t overwrite_feed = 0;
 char tmp_str[100];
@@ -73,18 +82,6 @@ void IRAM_ATTR handleLoop() {
 
 
 
-int col[6] = {10, 8, 6, 4, 2, 1};
-
-uint8_t sw_stat[3][6] = {
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-};
-
-int32_t enc_diff[4] = {0, 0, 0, 0};
-
-#define PSTEP 32
-
 void setup() {
     uint8_t n = 0;
     Serial.begin(115200);
@@ -92,13 +89,13 @@ void setup() {
     pinMode(15, OUTPUT);
 
     for (n = 0; n < 6; n++) {
-        pinMode(col[n], OUTPUT);
-        digitalWrite(col[n], 1);
+        pinMode(col_pins[n], OUTPUT);
+        digitalWrite(col_pins[n], 1);
     }
-    pinMode(7, INPUT_PULLUP);
-    pinMode(9, INPUT_PULLUP);
-    pinMode(5, INPUT_PULLUP);
-    pinMode(11, INPUT);
+    pinMode(row_pins[0], INPUT_PULLUP);
+    pinMode(row_pins[1], INPUT_PULLUP);
+    pinMode(row_pins[2], INPUT_PULLUP);
+    pinMode(row_pins[3], INPUT);
 
 
     fspi.begin(36, 37, 35, TFT_CS);
@@ -150,26 +147,26 @@ void setup() {
 void matrix_read() {
     uint8_t sw = 0;
     uint8_t n = 0;
-    digitalWrite(11, 0);
-    pinMode(11, INPUT);
+    digitalWrite(row_pins[3], 0);
+    pinMode(row_pins[3], INPUT);
     for (sw = 0; sw < 6; sw++) {
         for (n = 0; n < 6; n++) {
-            pinMode(col[n], INPUT);
+            pinMode(col_pins[n], INPUT);
         }
-        pinMode(col[sw], OUTPUT);
-        digitalWrite(col[sw], 0);
-        sw_stat[0][sw] = digitalRead(7);
-        sw_stat[1][sw] = digitalRead(9);
-        sw_stat[2][sw] = digitalRead(5);
+        pinMode(col_pins[sw], OUTPUT);
+        digitalWrite(col_pins[sw], 0);
+        sw_stat[0][sw] = digitalRead(row_pins[0]);
+        sw_stat[1][sw] = digitalRead(row_pins[1]);
+        sw_stat[2][sw] = digitalRead(row_pins[2]);
     }
     for (n = 0; n < 6; n++) {
-        pinMode(col[n], INPUT);
-        //digitalWrite(col[n], 1);
+        pinMode(col_pins[n], INPUT);
+        //digitalWrite(col_pins[n], 1);
     }
-    pinMode(col[axis_selected], OUTPUT);
-    digitalWrite(col[axis_selected], 0);
-    pinMode(11, OUTPUT);
-    digitalWrite(11, 1);
+    pinMode(col_pins[axis_selected], OUTPUT);
+    digitalWrite(col_pins[axis_selected], 0);
+    pinMode(row_pins[3], OUTPUT);
+    digitalWrite(row_pins[3], 1);
 }
 
 
