@@ -3,7 +3,7 @@
 all: format check install
 
 format:
-	ruff format mpg.py
+	ruff format mpg.py --line-length 150
 
 check:
 	ruff check mpg.py

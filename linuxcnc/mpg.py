@@ -12,16 +12,9 @@ from struct import pack, unpack
 parser = argparse.ArgumentParser()
 parser.add_argument("--device", "-d", help="device", type=str, default="/dev/ttyACM0")
 parser.add_argument("--baud", "-b", help="baudrate", type=int, default=115200)
-parser.add_argument(
-    "--test", "-t", help="test mode / no hal needed", default=False, action="store_true"
-)
-parser.add_argument(
-    "--leds",
-    "-l",
-    help="disable axis selection / led control by hal",
-    default=False,
-    action="store_true",
-)
+parser.add_argument("--test", "-t", help="test mode / no hal needed", default=False, action="store_true")
+parser.add_argument("--scaler", "-s", help="scale selctor", default=False, action="store_true")
+parser.add_argument("--leds", "-l", help="disable axis selection / led control by hal", default=False, action="store_true")
 args = parser.parse_args()
 
 # setup
@@ -82,6 +75,7 @@ if not args.test:
     for axis in AXIS:
         h.newpin(f"axis.{axis}.pos", hal.HAL_FLOAT, hal.HAL_IN)
         h.newpin(f"axis.{axis}.jog-counts", hal.HAL_S32, hal.HAL_OUT)
+        h.newpin(f"axis.{axis}.homed", hal.HAL_BIT, hal.HAL_IN)
     for name in OVERWRITES:
         h.newpin(f"override.{name}.value", hal.HAL_FLOAT, hal.HAL_IN)
         h.newpin(f"override.{name}.counts", hal.HAL_S32, hal.HAL_OUT)
@@ -110,6 +104,12 @@ if not args.test:
         for name in LED_NAMES:
             h.newpin(f"led.{name}", hal.HAL_BIT, hal.HAL_OUT)
         h.newpin("axis.selected", hal.HAL_U32, hal.HAL_IN)
+    if args.scaler:
+        h.newpin("jog-scale", hal.HAL_FLOAT, hal.HAL_OUT)
+    else:
+        h.newpin("jog-scale", hal.HAL_FLOAT, hal.HAL_IN)
+    h.newpin("machine.is-on", hal.HAL_BIT, hal.HAL_IN)
+    h.newpin("program.is-running", hal.HAL_BIT, hal.HAL_IN)
 
     h.ready()
 else:
@@ -117,6 +117,7 @@ else:
     for axis in AXIS:
         h[f"axis.{axis}.pos"] = 0.0
         h[f"axis.{axis}.jog-counts"] = 0
+        h[f"axis.{axis}.homed"] = 0
     for name in OVERWRITES:
         h[f"override.{name}.value"] = 0.5
         h[f"override.{name}.counts"] = 0
@@ -138,6 +139,10 @@ else:
             h[f"button.{name}-long-toggle-off"] = False
     for name in LED_NAMES:
         h[f"led.{name}"] = False
+    if args.scaler:
+        h["jog-scale"] = 0.01
+    h["machine.is-on"] = 1
+    h["program.is-running"] = 0
 
 
 # init serial
@@ -148,6 +153,10 @@ while ser.inWaiting() > 0:
 # select x axis by default
 if not args.leds:
     h["axis.selected"] = 1
+
+# scaler default
+if args.scaler:
+    h["jog-scale"] = 0.01
 
 
 def button_press(base_name):
@@ -163,9 +172,6 @@ def button_press(base_name):
             anum = int(name[-1])
             if h["axis.selected"] != anum:
                 h["axis.selected"] = anum
-            # else:
-            #    # deselect
-            #    h["axis.selected"] = 0
 
 
 # main loop
@@ -177,6 +183,16 @@ while True:
             if h[f"led.{name}"]:
                 leds |= 1 << ln
 
+        if h["machine.is-on"]:
+            leds |= 1 << 6
+        if h["program.is-running"]:
+            leds |= 1 << 7
+        for num, axis in enumerate(AXIS):
+            if h[f"axis.{axis}.homed"]:
+                leds |= 1 << (8+num)
+
+
+
         # pack and send tx data
         data = b""
         for axis in AXIS:
@@ -184,6 +200,9 @@ while True:
         for name in OVERWRITES:
             data += pack("<h", int(h[f"override.{name}.value"] * 100.0))
         data += pack("<H", int(leds))
+        data += pack("<f", h[f"jog-scale"])
+        data += pack("<f", 0.0)
+        data += pack("<f", 0.0)
         ser.write(bytes(data))
 
         # receive and unpack rx data
@@ -194,9 +213,7 @@ while True:
             jog_diff = unpack("<h", bytes(msgFromServer[bpos : bpos + 2]))[0]
             bpos += 2
             for name in OVERWRITES:
-                h[f"override.{name}.counts"] = unpack(
-                    "<h", bytes(msgFromServer[bpos : bpos + 2])
-                )[0]
+                h[f"override.{name}.counts"] = unpack("<h", bytes(msgFromServer[bpos : bpos + 2]))[0]
                 bpos += 2
             buttons = unpack("<I", bytes(msgFromServer[bpos : bpos + 4]))[0]
             bpos += 4
@@ -242,9 +259,19 @@ while True:
                 h[f"button.{name}-toggle-not"] = not h[f"button.{name}-toggle"]
                 if BUTTON_HAS_LONG[num]:
                     h[f"button.{name}-long-not"] = not h[f"button.{name}-long"]
-                    h[f"button.{name}-long-toggle-not"] = not h[
-                        f"button.{name}-long-toggle"
-                    ]
+                    h[f"button.{name}-long-toggle-not"] = not h[f"button.{name}-long-toggle"]
+
+
+            # select resolution
+            if args.scaler:
+                if h["button.06"] == True:
+                    h["jog-scale"] = 0.01
+                elif h["button.06-long"] == True:
+                    h["jog-scale"] = 0.001
+                elif h["button.06b"] == True:
+                    h["jog-scale"] = 0.1
+                elif h["button.06b-long"] == True:
+                    h["jog-scale"] = 1.0
 
             # set led for active axis
             if not args.leds:
