@@ -1,64 +1,6 @@
 #!/usr/bin/env python3
-"""
-
-loadusr mpg
-
-# MPG
-#net rios.iocontrol_0_emc-enable-in <= mpg.button.estop-not
-#net rios.iocontrol_0_emc-enable-in => iocontrol.0.emc-enable-in
-
-net rios.spindle_start <= mpg.button.01
-net rios.spindle_start => halui.spindle.0.start
-
-net rios.spindle_stop <= mpg.button.01b
-net rios.spindle_stop => halui.spindle.0.stop
-
-setp joint.0.jog-vel-mode 1
-setp joint.0.jog-scale 0.01
-setp joint.0.jog-enable 1
-setp axis.x.jog-vel-mode 1
-setp axis.x.jog-scale 0.01
-setp axis.x.jog-enable 1
-net rios.axis_x_jog-counts <= mpg.axis.x.jog-counts
-net rios.axis_x_jog-counts => axis.x.jog-counts
-net rios.axis_x_jog-counts => joint.0.jog-counts
-
-setp joint.1.jog-vel-mode 1
-setp joint.1.jog-scale 0.01
-setp joint.1.jog-enable 1
-setp axis.y.jog-vel-mode 1
-setp axis.y.jog-scale 0.01
-setp axis.y.jog-enable 1
-net rios.axis_y_jog-counts <= mpg.axis.y.jog-counts
-net rios.axis_y_jog-counts => axis.y.jog-counts
-net rios.axis_y_jog-counts => joint.1.jog-counts
-
-net display_x halui.axis.x.pos-relative => mpg.axis.x.pos
-net display_y halui.axis.y.pos-relative => mpg.axis.y.pos
-net display_z halui.axis.z.pos-relative => mpg.axis.z.pos
-
-setp halui.feed-override.scale 0.01
-net rios.feed-override <= mpg.override.feed.counts
-net rios.feed-override => halui.feed-override.counts
-
-setp halui.rapid-override.scale 0.01
-net rios.rapid-override <= mpg.override.rapid.counts
-net rios.rapid-override => halui.rapid-override.counts
-
-setp halui.spindle.0.override.scale 0.01
-net rios.spindle-override <= mpg.override.spindle.counts
-net rios.spindle-override => halui.spindle.0.override.counts
-
-net rios.override-feed-value <= halui.feed-override.value
-net rios.override-feed-value => mpg.override.feed.value
-
-net rios.override-rapid-value <= halui.rapid-override.value
-net rios.override-rapid-value => mpg.override.rapid.value
-
-net rios.override-spindle-value <= halui.spindle.0.override.value
-net rios.override-spindle-value => mpg.override.spindle.value
-
-"""
+#
+#
 
 import time
 import serial
