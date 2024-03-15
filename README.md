@@ -36,6 +36,12 @@ cd pendant
 pio run --target upload
 ```
 
+if you need a wireless connection (needs 2. ESP32S2):
+```
+cd dongle
+pio run --target upload
+```
+
 
 ## Install Hal-Component
 ```
