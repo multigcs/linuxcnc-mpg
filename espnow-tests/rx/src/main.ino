@@ -63,20 +63,18 @@ receivedMessage myReceivedMessage;
 void messageReceived(const uint8_t* macAddr, const uint8_t* incomingData, int len) {
     memcpy(&rx_data.data, incomingData, sizeof(rx_data.data));
 
-    Serial.printf("Incoming Message from: %02X:%02X:%02X:%02X:%02X:%02X \n\r", macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
+    // Serial.printf("Incoming Message from: %02X:%02X:%02X:%02X:%02X:%02X \n\r", macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
 
-    Serial.println(rx_data.values.pos[0]);
-    
     tx_data.values.jog[0] += 1;
     tx_data.values.jog[1] += 2;
 
-    Serial.println();
-    Serial.println("Sending answer...");
-    Serial.println();
+    // Serial.println();
+    // Serial.println("Sending answer...");
+    // Serial.println();
 
     esp_err_t result = esp_now_send(receiverAddress, (uint8_t *) &tx_data.data, sizeof(tx_data.data));
     if (result != ESP_OK) {
-        Serial.println("Sending error");
+        // Serial.println("Sending error");
     }
 }
 
@@ -104,5 +102,9 @@ void setup() {
 }
 
 void loop() {
+
+    Serial.println(rx_data.values.pos[0]);
+    delay(20);
+
 }
 
