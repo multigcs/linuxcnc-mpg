@@ -26,8 +26,10 @@ args = parser.parse_args()
 
 # setup
 RX_SIZE = 12
+LONG_PRESS = 20
 AXIS = ("x", "y", "z", "a", "b", "c")
 OVERWRITES = ("feed", "rapid", "spindle")
+LED_NAMES = ("01", "02", "03", "04", "05", "06")
 BUTTON_NAMES = (
     "01",
     "02",
@@ -48,9 +50,30 @@ BUTTON_NAMES = (
     "estop",
     "06b",
 )
-LED_NAMES = ("01", "02", "03", "04", "05", "06")
+BUTTON_HAS_LONG = (
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    False,
+    True,
+)
+
 
 # create hal pins
+timer = {}
 last = {}
 if not args.test:
     import hal
@@ -62,7 +85,8 @@ if not args.test:
     for name in OVERWRITES:
         h.newpin(f"override.{name}.value", hal.HAL_FLOAT, hal.HAL_IN)
         h.newpin(f"override.{name}.counts", hal.HAL_S32, hal.HAL_OUT)
-    for name in BUTTON_NAMES:
+    for num, name in enumerate(BUTTON_NAMES):
+        timer[f"button.{name}"] = 0
         last[f"button.{name}"] = False
         h.newpin(f"button.{name}", hal.HAL_BIT, hal.HAL_OUT)
         h.newpin(f"button.{name}-not", hal.HAL_BIT, hal.HAL_OUT)
@@ -70,6 +94,14 @@ if not args.test:
         h.newpin(f"button.{name}-toggle-not", hal.HAL_BIT, hal.HAL_OUT)
         h.newpin(f"button.{name}-toggle-on", hal.HAL_BIT, hal.HAL_OUT)
         h.newpin(f"button.{name}-toggle-off", hal.HAL_BIT, hal.HAL_OUT)
+        if BUTTON_HAS_LONG[num]:
+            h.newpin(f"button.{name}-long", hal.HAL_BIT, hal.HAL_OUT)
+            h.newpin(f"button.{name}-long-not", hal.HAL_BIT, hal.HAL_OUT)
+            h.newpin(f"button.{name}-long-toggle", hal.HAL_BIT, hal.HAL_OUT)
+            h.newpin(f"button.{name}-long-toggle-not", hal.HAL_BIT, hal.HAL_OUT)
+            h.newpin(f"button.{name}-long-toggle-on", hal.HAL_BIT, hal.HAL_OUT)
+            h.newpin(f"button.{name}-long-toggle-off", hal.HAL_BIT, hal.HAL_OUT)
+
     if args.leds:
         for name in LED_NAMES:
             h.newpin(f"led.{name}", hal.HAL_BIT, hal.HAL_IN)
@@ -88,7 +120,8 @@ else:
     for name in OVERWRITES:
         h[f"override.{name}.value"] = 0.5
         h[f"override.{name}.counts"] = 0
-    for name in BUTTON_NAMES:
+    for num, name in enumerate(BUTTON_NAMES):
+        timer[f"button.{name}"] = 0
         last[f"button.{name}"] = False
         h[f"button.{name}"] = False
         h[f"button.{name}-not"] = True
@@ -96,6 +129,13 @@ else:
         h[f"button.{name}-toggle-not"] = True
         h[f"button.{name}-toggle-on"] = False
         h[f"button.{name}-toggle-off"] = False
+        if BUTTON_HAS_LONG[num]:
+            h[f"button.{name}-long"] = False
+            h[f"button.{name}-long-not"] = True
+            h[f"button.{name}-long-toggle"] = False
+            h[f"button.{name}-long-toggle-not"] = True
+            h[f"button.{name}-long-toggle-on"] = False
+            h[f"button.{name}-long-toggle-off"] = False
     for name in LED_NAMES:
         h[f"led.{name}"] = False
 
@@ -108,6 +148,25 @@ while ser.inWaiting() > 0:
 # select x axis by default
 if not args.leds:
     h["axis.selected"] = 1
+
+
+def button_press(base_name):
+    h[f"{base_name}"] = True
+    h[f"{base_name}-toggle"] = not h[f"{base_name}-toggle"]
+    if h[f"{base_name}-toggle"]:
+        h[f"{base_name}-toggle-on"] = True
+    else:
+        h[f"{base_name}-toggle-off"] = True
+    # select active axis
+    if not args.leds:
+        if name.startswith("sel0"):
+            anum = int(name[-1])
+            if h["axis.selected"] != anum:
+                h["axis.selected"] = anum
+            # else:
+            #    # deselect
+            #    h["axis.selected"] = 0
+
 
 # main loop
 while True:
@@ -150,30 +209,42 @@ while True:
             for num, name in enumerate(BUTTON_NAMES):
                 h[f"button.{name}-toggle-on"] = False
                 h[f"button.{name}-toggle-off"] = False
+                if BUTTON_HAS_LONG[num]:
+                    h[f"button.{name}-long-toggle-on"] = False
+                    h[f"button.{name}-long-toggle-off"] = False
+                    h[f"button.{name}"] = False
+
                 if buttons & (1 << num) != 0:
                     if not last[f"button.{name}"]:
-                        h[f"button.{name}"] = True
-                        h[f"button.{name}-toggle"] = not h[f"button.{name}-toggle"]
-                        if h[f"button.{name}-toggle"]:
-                            h[f"button.{name}-toggle-on"] = True
+                        if BUTTON_HAS_LONG[num]:
+                            timer[f"button.{name}"] = LONG_PRESS
                         else:
-                            h[f"button.{name}-toggle-off"] = True
-                        # select active axis
-                        if not args.leds:
-                            if name.startswith("sel0"):
-                                anum = int(name[-1])
-                                if h["axis.selected"] != anum:
-                                    h["axis.selected"] = anum
-                                # else:
-                                #    # deselect
-                                #    h["axis.selected"] = 0
+                            button_press(f"button.{name}")
+                    elif BUTTON_HAS_LONG[num]:
+                        if timer[f"button.{name}"] > 1:
+                            timer[f"button.{name}"] -= 1
+                        elif timer[f"button.{name}"] == 1:
+                            timer[f"button.{name}"] = 0
+                            button_press(f"button.{name}-long")
                     last[f"button.{name}"] = True
                 else:
-                    if last[f"button.{name}"]:
+                    if timer[f"button.{name}"] > 1:
+                        timer[f"button.{name}"] = 0
+                        button_press(f"button.{name}")
+
+                    if not BUTTON_HAS_LONG[num]:
                         h[f"button.{name}"] = False
+                    else:
+                        h[f"button.{name}-long"] = False
                     last[f"button.{name}"] = False
+
                 h[f"button.{name}-not"] = not h[f"button.{name}"]
                 h[f"button.{name}-toggle-not"] = not h[f"button.{name}-toggle"]
+                if BUTTON_HAS_LONG[num]:
+                    h[f"button.{name}-long-not"] = not h[f"button.{name}-long"]
+                    h[f"button.{name}-long-toggle-not"] = not h[
+                        f"button.{name}-long-toggle"
+                    ]
 
             # set led for active axis
             if not args.leds:
