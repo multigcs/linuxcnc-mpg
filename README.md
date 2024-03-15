@@ -15,6 +15,9 @@ https://www.youtube.com/watch?v=mJ1qc-PS2gQ
 - [x] transmitting only the diff of the encoder's
 - [x] interception of connection problems
 - [ ] adding LIPO with wireless and USB charger
+- [ ] adding ADC to check LIPO voltage
+- [ ] better GUI / maybe touch support (if i found a free usable pin)
+- [ ] more values/halpins to display
 - [ ] full hal examples
 
 
