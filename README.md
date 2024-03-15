@@ -5,6 +5,12 @@ work in progress !!
 [![DIY-MPG for LinuxCNC - hal tests](https://img.youtube.com/vi/hYcYCV4b4o4/0.jpg)](https://www.youtube.com/watch?v=hYcYCV4b4o4 "DIY-MPG for LinuxCNC - hal tests")
 
 
+## TODO
+- [ ] espnow support (incl. dongle/bridge)
+- [ ] transmitting only the diff of the encoder's
+- [ ] interception of connection problems
+- [ ] full hal examples
+
 
 ## BOM
 
