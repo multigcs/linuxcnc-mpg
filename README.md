@@ -59,7 +59,7 @@ sudo chmod 755 /usr/local/bin/mpg
 ## Hal-Pins
 
 | name | dir | type |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | mpg.axis.a.homed | IN | bit |
 | mpg.axis.a.jog-counts | OUT | s32 |
 | mpg.axis.a.pos | IN | float |
