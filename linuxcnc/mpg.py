@@ -117,7 +117,7 @@ else:
     for axis in AXIS:
         h[f"axis.{axis}.pos"] = 0.0
         h[f"axis.{axis}.jog-counts"] = 0
-        h[f"axis.{axis}.homed"] = 0
+        h[f"axis.{axis}.homed"] = True
     for name in OVERWRITES:
         h[f"override.{name}.value"] = 0.5
         h[f"override.{name}.counts"] = 0
@@ -141,8 +141,8 @@ else:
         h[f"led.{name}"] = False
     if args.scaler:
         h["jog-scale"] = 0.01
-    h["machine.is-on"] = 1
-    h["program.is-running"] = 0
+    h["machine.is-on"] = True
+    h["program.is-running"] = False
 
 
 # init serial
