@@ -32,13 +32,14 @@ work in progress !!
 ## Compile and Load Firmware
 you need a working platformio installation (https://platformio.org/install)
 ```
+cd pendant
 pio run --target upload
 ```
 
 
 ## Install Hal-Component
 ```
-sudo cp mpg.py /usr/local/bin/mpg
+sudo cp linuxcnc/mpg.py /usr/local/bin/mpg
 chmod 755 /usr/local/bin/mpg
 
 ``` 
