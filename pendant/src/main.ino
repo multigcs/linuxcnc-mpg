@@ -250,6 +250,15 @@ void loop() {
     uint8_t n = 0;
     uint8_t nr = 0;
 
+    float batt_voltage = 0.0;
+
+
+    for (n = 0; n < 100; n++) {
+        batt_voltage += (float)analogRead(ADC);
+    }
+    batt_voltage = batt_voltage / 100.0 / 1500.0;
+
+
     matrix_read();
     tx_data.values.ow_feed = r2.getPosition();
     tx_data.values.ow_rapid = r3.getPosition();
@@ -342,11 +351,11 @@ void loop() {
         tft.setTextSize(1);
         tft.setTextColor(ILI9341_YELLOW, ILI9341_BLACK);
         tft.setCursor(215, 5 + nr * 47 + 2);
-        tft.print("Jog:");
+        tft.print("BATT:");
         tft.setTextSize(3);
         tft.setTextColor(ILI9341_BLUE, ILI9341_BLACK);
-        tft.setCursor(230+16, 5 + nr * 45 + 25);
-        sprintf(tmp_str, "%3i%%", 0);
+        tft.setCursor(230, 5 + nr * 45 + 25);
+        sprintf(tmp_str, "%0.2fV", batt_voltage);
         tft.print(tmp_str);
     } else if (update == 10) {
         nr = 4;
