@@ -116,7 +116,7 @@ else:
     h = {}
     for axis in AXIS:
         h[f"axis.{axis}.pos"] = 0.0
-        h[f"axis.{axis}.jog-counts"] = 0
+        h[f"axis.{axis}.jog-counts"] = 50
         h[f"axis.{axis}.homed"] = True
     for name in OVERWRITES:
         h[f"override.{name}.value"] = 0.5
@@ -146,7 +146,7 @@ else:
 
 
 # init serial
-ser = serial.Serial(args.device, args.baud, timeout=0.01)
+ser = serial.Serial(args.device, args.baud, timeout=0.03)
 while ser.inWaiting() > 0:
     ser.read(1)
 
@@ -189,24 +189,31 @@ while True:
             leds |= 1 << 7
         for num, axis in enumerate(AXIS):
             if h[f"axis.{axis}.homed"]:
-                leds |= 1 << (8+num)
+                leds |= 1 << (8 + num)
 
-
+        # serial sync
+        #        while ser.inWaiting() > 0:
+        #            ser.read(1)
 
         # pack and send tx data
         data = b""
+        data += bytes([99, 18, 27, 36])
         for axis in AXIS:
             data += pack("<f", h[f"axis.{axis}.pos"])
         for name in OVERWRITES:
             data += pack("<h", int(h[f"override.{name}.value"] * 100.0))
         data += pack("<H", int(leds))
-        data += pack("<f", h[f"jog-scale"])
+        data += pack("<f", h["jog-scale"])
         data += pack("<f", 0.0)
         data += pack("<f", 0.0)
         ser.write(bytes(data))
 
         # receive and unpack rx data
         msgFromServer = ser.read(RX_SIZE)
+
+        if args.test:
+            print(msgFromServer)
+
         if msgFromServer and len(msgFromServer) == RX_SIZE:
             # convert rx data
             bpos = 0
@@ -261,16 +268,15 @@ while True:
                     h[f"button.{name}-long-not"] = not h[f"button.{name}-long"]
                     h[f"button.{name}-long-toggle-not"] = not h[f"button.{name}-long-toggle"]
 
-
             # select resolution
             if args.scaler:
-                if h["button.06"] == True:
+                if h["button.06"] is True:
                     h["jog-scale"] = 0.01
-                elif h["button.06-long"] == True:
+                elif h["button.06-long"] is True:
                     h["jog-scale"] = 0.001
-                elif h["button.06b"] == True:
+                elif h["button.06b"] is True:
                     h["jog-scale"] = 0.1
-                elif h["button.06b-long"] == True:
+                elif h["button.06b-long"] is True:
                     h["jog-scale"] = 1.0
 
             # set led for active axis
@@ -285,16 +291,13 @@ while True:
             if args.test:
                 for key, value in h.items():
                     print(key, value)
-                print("-------------")
+
                 # loop back for testing
                 for axis in AXIS:
                     h[f"axis.{axis}.pos"] = h[f"axis.{axis}.jog-counts"] / 10.0
                 for name in OVERWRITES:
                     h[f"override.{name}.value"] = h[f"override.{name}.counts"] / 100.0
 
-        # serial sync
-        while ser.inWaiting() > 0:
-            ser.read(1)
     except IOError as err:
         print(f"MPG: IOERROR: {err}")
         try:
@@ -303,9 +306,9 @@ while True:
                 while True:
                     if os.path.exists(args.device):
                         print("MPG: reconnect to device..")
-                        ser = serial.Serial(args.device, args.baud, timeout=0.01)
-                        while ser.inWaiting() > 0:
-                            ser.read(1)
+                        ser = serial.Serial(args.device, args.baud, timeout=0.03)
+                        # while ser.inWaiting() > 0:
+                        #    ser.read(1)
                         break
                     else:
                         print("MPG: wait for device..")

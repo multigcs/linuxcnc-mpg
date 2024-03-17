@@ -1,12 +1,12 @@
-// poe
 
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include <WiFi.h>
 
+#define LED_PIN 15
+
 uint8_t receiverAddress[] = {0x94, 0x3C, 0xC6, 0x33, 0x68, 0x98};
 uint8_t myAddress[] = {0x30, 0xAE, 0xA4, 0x7B, 0x79, 0x90};
-
 
 
 struct rx_data_t {
@@ -79,26 +79,49 @@ void setup() {
     }
 }
 
+uint8_t rx_start_pos = 0;
 void loop() {
     uint8_t n = 0;
     uint8_t rx_buffer[rx_data_t_size];
     uint8_t tx_buffer[tx_data_t_size];
-    uint8_t rlen = Serial.readBytes(rx_buffer, rx_data_t_size);
-    if (rlen == rx_data_t_size) {
-        for (n = 0; n < rx_data_t_size; n++) {
-            rx_data.data[n] = rx_buffer[n];
-        }
-        esp_err_t result = esp_now_send(receiverAddress, (uint8_t *) &rx_data.data, sizeof(rx_data.data));
-        if (result != ESP_OK) {
-        }
-        for (n = 0; n < tx_data_t_size; n++) {
-            tx_buffer[n] = tx_data.data[n];
-        }
-        Serial.write(tx_buffer, tx_data_t_size);
-    }
+
+
     while (Serial.available() > 0) {
         uint8_t c = Serial.read();
+        //Serial.print("< ");
+        //Serial.println(c);
+
+        if (rx_start_pos == 0 && c == 99) {
+            rx_start_pos = 1;
+            //Serial.println("#1");
+        } else if (rx_start_pos == 1 && c == 18) {
+            rx_start_pos = 2;
+            //Serial.println("#2");
+        } else if (rx_start_pos == 2 && c == 27) {
+            rx_start_pos = 3;
+            //Serial.println("#3");
+        } else if (rx_start_pos == 3 && c == 36) {
+            rx_start_pos = 0;
+            uint8_t rlen = Serial.readBytes(rx_buffer, rx_data_t_size);
+            if (rlen == rx_data_t_size) {
+                for (n = 0; n < rx_data_t_size; n++) {
+                    rx_data.data[n] = rx_buffer[n];
+                }
+                esp_err_t result = esp_now_send(receiverAddress, (uint8_t *) &rx_data.data, sizeof(rx_data.data));
+                if (result != ESP_OK) {
+                }
+                for (n = 0; n < tx_data_t_size; n++) {
+                    tx_buffer[n] = tx_data.data[n];
+                }
+                Serial.write(tx_buffer, tx_data_t_size);
+            }
+        } else {
+            rx_start_pos = 0;
+            Serial.println("sync error");
+        }
     }
-    delay(5);
+
+    delay(10);
+
 }
 
