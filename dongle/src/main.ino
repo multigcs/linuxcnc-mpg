@@ -52,9 +52,13 @@ void messageSent(const uint8_t *macAddr, esp_now_send_status_t status) {
 
 void messageReceived(const uint8_t* macAddr, const uint8_t* incomingData, int len) {
     memcpy(&tx_data.data, incomingData, sizeof(tx_data.data));
+    digitalWrite(LED_PIN, 1);
 }
 
 void setup() {
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, 1);
+
     Serial.begin(115200);
     // delay(1000); // uncomment if your serial monitor is empty
     WiFi.mode(WIFI_STA);
@@ -85,7 +89,7 @@ void loop() {
     uint8_t rx_buffer[rx_data_t_size];
     uint8_t tx_buffer[tx_data_t_size];
 
-
+    digitalWrite(LED_PIN, 0);
     while (Serial.available() > 0) {
         uint8_t c = Serial.read();
         //Serial.print("< ");
