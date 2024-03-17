@@ -8,6 +8,7 @@
 uint8_t receiverAddress[] = {0x94, 0x3C, 0xC6, 0x33, 0x68, 0x98};
 uint8_t myAddress[] = {0x30, 0xAE, 0xA4, 0x7B, 0x79, 0x90};
 
+volatile uint8_t rx_ok = 0;
 
 struct rx_data_t {
     float pos[6];
@@ -25,7 +26,7 @@ union rx_Data_t{
     rx_data_t values;
     byte data[rx_data_t_size];
 };
-rx_Data_t rx_data;  
+volatile rx_Data_t rx_data;  
 
 struct tx_data_t {
     int16_t jog;
@@ -52,7 +53,7 @@ void messageSent(const uint8_t *macAddr, esp_now_send_status_t status) {
 
 void messageReceived(const uint8_t* macAddr, const uint8_t* incomingData, int len) {
     memcpy(&tx_data.data, incomingData, sizeof(tx_data.data));
-    digitalWrite(LED_PIN, 1);
+    rx_ok = 1;
 }
 
 void setup() {
@@ -89,7 +90,18 @@ void loop() {
     uint8_t rx_buffer[rx_data_t_size];
     uint8_t tx_buffer[tx_data_t_size];
 
-    digitalWrite(LED_PIN, 0);
+    if (rx_ok == 1) {
+        rx_ok = 0;
+        digitalWrite(LED_PIN, 1);
+        for (n = 0; n < tx_data_t_size; n++) {
+            tx_buffer[n] = tx_data.data[n];
+        }
+        Serial.write(tx_buffer, tx_data_t_size);
+    } else {
+        digitalWrite(LED_PIN, 0);
+    }
+
+
     while (Serial.available() > 0) {
         uint8_t c = Serial.read();
         //Serial.print("< ");
@@ -114,10 +126,6 @@ void loop() {
                 esp_err_t result = esp_now_send(receiverAddress, (uint8_t *) &rx_data.data, sizeof(rx_data.data));
                 if (result != ESP_OK) {
                 }
-                for (n = 0; n < tx_data_t_size; n++) {
-                    tx_buffer[n] = tx_data.data[n];
-                }
-                Serial.write(tx_buffer, tx_data_t_size);
             }
         } else {
             rx_start_pos = 0;
@@ -125,7 +133,7 @@ void loop() {
         }
     }
 
-    delay(10);
+    delay(1);
 
 }
 

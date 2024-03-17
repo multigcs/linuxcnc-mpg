@@ -110,6 +110,7 @@ if not args.test:
         h.newpin("jog-scale", hal.HAL_FLOAT, hal.HAL_IN)
     h.newpin("machine.is-on", hal.HAL_BIT, hal.HAL_IN)
     h.newpin("program.is-running", hal.HAL_BIT, hal.HAL_IN)
+    h.newpin("connected", hal.HAL_BIT, hal.HAL_OUT)
 
     h.ready()
 else:
@@ -143,6 +144,7 @@ else:
         h["jog-scale"] = 0.01
     h["machine.is-on"] = True
     h["program.is-running"] = False
+    h["connected"] = False
 
 
 # init serial
@@ -215,6 +217,8 @@ while True:
             print(msgFromServer)
 
         if msgFromServer and len(msgFromServer) == RX_SIZE:
+            h["connected"] = True
+
             # convert rx data
             bpos = 0
             jog_diff = unpack("<h", bytes(msgFromServer[bpos : bpos + 2]))[0]
@@ -297,6 +301,8 @@ while True:
                     h[f"axis.{axis}.pos"] = h[f"axis.{axis}.jog-counts"] / 10.0
                 for name in OVERWRITES:
                     h[f"override.{name}.value"] = h[f"override.{name}.counts"] / 100.0
+        else:
+            h["connected"] = False
 
     except IOError as err:
         print(f"MPG: IOERROR: {err}")
