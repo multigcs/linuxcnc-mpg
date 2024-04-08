@@ -37,28 +37,36 @@ https://www.youtube.com/watch?v=mJ1qc-PS2gQ
 
 ## PINS
 
-| esp | func | tft   | keys | leds |
-| --- | ---  | ---   | ---  | ---  |
-| 14  | ADC  |       |      |      |
-| 33  | DC   | D/C   |      |      |
-| 34  | CS   | CS    |      |      |
-| 36  | SCK  | SCK   |      |      |
-| 37  | MISO | SDO   |      |      |
-| 35  | MOSI | SDI   |      |      |
-| 3V3 |      | VCC   |      |      |
-| GND |      | GND   |      |      |
-| 3V3 |      | LED   |      |      |
-| 3V3 |      | RESET |      |      |
-| 10  | COL0 |       | X    | X    |
-| 8   | COL1 |       | X    | X    |
-| 6   | COL2 |       | X    | X    |
-| 4   | COL3 |       | X    | X    |
-| 2   | COL4 |       | X    | X    |
-| 1   | COL5 |       | X    | X    |
-| 7   | ROW0 |       | X    |      |
-| 9   | ROW1 |       | X    |      |
-| 5   | ROW2 |       | X    |      |
-| 11  | ROW3 |       |      | X    |
+| esp | func | tft   | keys | leds | comment       |
+| --- | ---  | ---   | ---  | ---  | ---           |
+| 14  | ADC  |       |      |      | Batt-Voltage  |
+| 33  | DC   | D/C   |      |      |               |
+| 34  | CS   | CS    |      |      |               |
+| 36  | SCK  | SCK   |      |      |               |
+| 37  | MISO | SDO   |      |      |               |
+| 35  | MOSI | SDI   |      |      |               |
+| 3V3 |      | VCC   |      |      |               |
+| GND |      | GND   |      |      |               |
+| 3V3 |      | LED   |      |      |               |
+| 3V3 |      | RESET |      |      |               |
+| 10  | COL0 |       | X    | X    |               |
+| 8   | COL1 |       | X    | X    |               |
+| 6   | COL2 |       | X    | X    |               |
+| 4   | COL3 |       | X    | X    |               |
+| 2   | COL4 |       | X    | X    |               |
+| 1   | COL5 |       | X    | X    |               |
+| 7   | ROW0 |       | X    |      |               |
+| 9   | ROW1 |       | X    |      |               |
+| 5   | ROW2 |       | X    |      |               |
+| 11  | ROW3 |       |      | X    |               |
+| 13  | ENC1_A |     |      |      | Jog-Wheel     |
+| 12  | ENC1_B |     |      |      | Jog-Wheel     |
+| 16  | ENC2_A |     |      |      | Feedrate      |
+| 17  | ENC2_B |     |      |      | Feedrate      |
+| 18  | ENC3_A |     |      |      | Rapid         |
+| 21  | ENC3_B |     |      |      | Rapid         |
+| 38  | ENC4_A |     |      |      | Spindle       |
+| 37  | ENC4_B |     |      |      | Spindle       |
 
 
 ## Compile and Load Firmware
