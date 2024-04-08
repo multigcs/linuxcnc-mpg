@@ -14,8 +14,8 @@ https://www.youtube.com/watch?v=mJ1qc-PS2gQ
 - [x] controling LED's and axis switching from python
 - [x] transmitting only the diff of the encoder's
 - [x] interception of connection problems
-- [ ] adding LIPO with wireless and USB charger
-- [ ] adding ADC to check LIPO voltage
+- [x] adding LIPO with wireless and USB charger
+- [x] adding ADC to check LIPO voltage
 - [ ] better GUI / maybe touch support (if i found a free usable pin)
 - [ ] more values/halpins to display
 - [ ] full hal examples
@@ -34,6 +34,27 @@ https://www.youtube.com/watch?v=mJ1qc-PS2gQ
 | 14 | 12x12 momentary switch | https://www.amazon.de/dp/B07JBXS6RC |
 | 1 | Resistor ~680Ohm | |
 
+
+## PINS
+
+| esp | func | tft  | keys | leds |
+| --- | ---  | ---  | ---  | ---  |
+| 14  | ADC  |      |      |      |
+| 33  | DC   | DC   |      |      |
+| 34  | CS   | CS   |      |      |
+| 36  | SCK  | SCK  |      |      |
+| 37  | MISO | MISO |      |      |
+| 35  | MOSI | MOSI |      |      |
+| 10  | COL0 |      | X    | X    |
+| 8   | COL1 |      | X    | X    |
+| 6   | COL2 |      | X    | X    |
+| 4   | COL3 |      | X    | X    |
+| 2   | COL4 |      | X    | X    |
+| 1   | COL5 |      | X    | X    |
+| 7   | ROW0 |      | X    |      |
+| 9   | ROW1 |      | X    |      |
+| 5   | ROW2 |      | X    |      |
+| 11  | ROW3 |      |      | X    |
 
 
 ## Compile and Load Firmware
