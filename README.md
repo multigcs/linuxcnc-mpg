@@ -43,7 +43,6 @@ https://www.youtube.com/watch?v=mJ1qc-PS2gQ
 | 33  | DC   | D/C   |      |      |               |
 | 34  | CS   | CS    |      |      |               |
 | 36  | SCK  | SCK   |      |      |               |
-| 37  | MISO | SDO   |      |      |               |
 | 35  | MOSI | SDI   |      |      |               |
 | 3V3 |      | VCC   |      |      |               |
 | GND |      | GND   |      |      |               |
