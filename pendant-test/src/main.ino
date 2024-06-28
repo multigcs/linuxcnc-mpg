@@ -217,8 +217,8 @@ void update_stats() {
         }
     }
 
-    tx_data.values.jog = r1.getPosition();
-    r1.resetPosition(0);
+    //tx_data.values.jog = r1.getPosition();
+    //r1.resetPosition(0);
 
 
     tx_data.values.buttons = 0;
@@ -256,6 +256,8 @@ void loop() {
 
 
     matrix_read();
+    
+    tx_data.values.jog = r1.getPosition();
     tx_data.values.ow_feed = r2.getPosition();
     tx_data.values.ow_rapid = r3.getPosition();
     tx_data.values.ow_spindle = r4.getPosition();
