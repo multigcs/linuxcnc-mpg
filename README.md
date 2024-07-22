@@ -341,6 +341,8 @@ sudo chmod 755 /usr/local/bin/mpg
 ## Hal-Configuration
 this is for LinuxCNC >= 2.9
 
+**please use your: custom_postgui.hal file**
+
 ### example1
 ``` 
 loadusr mpg -d /dev/ttyACM0 -s
