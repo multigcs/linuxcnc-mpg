@@ -86,17 +86,26 @@ void setup() {
 
 uint8_t rx_start_pos = 0;
 void loop() {
+    uint8_t csum = 0;
     uint8_t n = 0;
     uint8_t rx_buffer[rx_data_t_size];
-    uint8_t tx_buffer[tx_data_t_size];
+    uint8_t tx_buffer[tx_data_t_size + 5];
 
     if (rx_ok == 1) {
         rx_ok = 0;
         digitalWrite(LED_PIN, 1);
+        tx_buffer[0] = 123;
+        tx_buffer[1] = 234;
+        tx_buffer[2] = 222;
+        tx_buffer[3] = 111;
+        csum = 0;
         for (n = 0; n < tx_data_t_size; n++) {
-            tx_buffer[n] = tx_data.data[n];
+            tx_buffer[4 + n] = tx_data.data[n];
+            csum += tx_data.data[n];
         }
-        Serial.write(tx_buffer, tx_data_t_size);
+        tx_buffer[4 + n] = csum;
+
+        Serial.write(tx_buffer, tx_data_t_size + 5);
     } else {
         digitalWrite(LED_PIN, 0);
     }
@@ -120,11 +129,16 @@ void loop() {
             rx_start_pos = 0;
             uint8_t rlen = Serial.readBytes(rx_buffer, rx_data_t_size);
             if (rlen == rx_data_t_size) {
+                csum = 0;
                 for (n = 0; n < rx_data_t_size; n++) {
                     rx_data.data[n] = rx_buffer[n];
+                    csum += rx_buffer[n];
                 }
-                esp_err_t result = esp_now_send(receiverAddress, (uint8_t *) &rx_data.data, sizeof(rx_data.data));
-                if (result != ESP_OK) {
+                c = Serial.read();
+                if (c == csum) {
+                    esp_err_t result = esp_now_send(receiverAddress, (uint8_t *) &rx_data.data, sizeof(rx_data.data));
+                    if (result != ESP_OK) {
+                    }
                 }
             }
         } else {

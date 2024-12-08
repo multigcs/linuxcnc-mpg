@@ -111,6 +111,8 @@ if not args.test:
     h.newpin("machine.is-on", hal.HAL_BIT, hal.HAL_IN)
     h.newpin("program.is-running", hal.HAL_BIT, hal.HAL_IN)
     h.newpin("connected", hal.HAL_BIT, hal.HAL_OUT)
+    h.newpin("csum", hal.HAL_BIT, hal.HAL_OUT)
+    h.newpin("header", hal.HAL_BIT, hal.HAL_OUT)
 
     h.ready()
 else:
@@ -140,11 +142,12 @@ else:
             h[f"button.{name}-long-toggle-off"] = False
     for name in LED_NAMES:
         h[f"led.{name}"] = False
-    if args.scaler:
-        h["jog-scale"] = 0.01
+    h["jog-scale"] = 0.01
     h["machine.is-on"] = True
     h["program.is-running"] = False
     h["connected"] = False
+    h["csum"] = False
+    h["header"] = False
 
 
 # init serial
@@ -208,19 +211,42 @@ while True:
         data += pack("<f", h["jog-scale"])
         data += pack("<f", 0.0)
         data += pack("<f", 0.0)
+        data += bytes([sum(data[4:]) & 255])
+
         ser.write(bytes(data))
 
         # receive and unpack rx data
-        msgFromServer = ser.read(RX_SIZE)
+        msgFromServer = ser.read(RX_SIZE + 5)
 
         if args.test:
-            print(msgFromServer)
+            for byte in msgFromServer:
+                print([int(byte) for byte in msgFromServer])
 
-        if msgFromServer and len(msgFromServer) == RX_SIZE:
+        if msgFromServer and len(msgFromServer) == RX_SIZE + 5:
+            if int(msgFromServer[0]) == 123 and int(msgFromServer[1]) == 234 and int(msgFromServer[2]) == 222 and int(msgFromServer[3]) == 111:
+                if args.test:
+                    print("HEADER OK")
+                h["header"] = True
+            else:
+                if args.test:
+                    print("HEADER ERROR")
+                h["header"] = False
+                continue
+
+            if msgFromServer[-1] == sum(msgFromServer[4:-1]) & 255:
+                if args.test:
+                    print("CSUM OK")
+                h["csum"] = True
+            else:
+                if args.test:
+                    print("CSUM ERROR")
+                h["csum"] = False
+                continue
+
             h["connected"] = True
 
             # convert rx data
-            bpos = 0
+            bpos = 4
             jog_diff = unpack("<h", bytes(msgFromServer[bpos : bpos + 2]))[0]
             bpos += 2
             for name in OVERWRITES:
@@ -293,8 +319,8 @@ while True:
 
             # print halpins in testmode
             if args.test:
-                for key, value in h.items():
-                    print(key, value)
+                #for key, value in h.items():
+                #    print(key, value)
 
                 # loop back for testing
                 for axis in AXIS:
@@ -303,7 +329,6 @@ while True:
                     h[f"override.{name}.value"] = h[f"override.{name}.counts"] / 100.0
         else:
             h["connected"] = False
-
     except IOError as err:
         print(f"MPG: IOERROR: {err}")
         try:
