@@ -17,8 +17,10 @@ struct rx_data_t {
     int16_t ow_spindle;
     int16_t leds;
     float jog_scale;
-    float aux1;
-    float aux2;
+    float spindle_speed;
+    int16_t stats;
+    int8_t tool;
+    int8_t aux;
 };
 const int rx_data_t_size = sizeof(rx_data_t);
 

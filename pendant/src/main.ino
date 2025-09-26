@@ -51,11 +51,14 @@ struct rx_data_t {
     int16_t ow_spindle;
     uint16_t leds;
     float jog_scale;
-    float aux1;
-    float aux2;
+    float spindle_speed;
+    int16_t stats;
+    int8_t tool;
+    int8_t aux;
 };
 const int rx_data_t_size = sizeof(rx_data_t);
 
+uint8_t last_mode = 255;
 rx_data_t last_values;
 float last_batt_voltage = -1.0;
 
@@ -104,23 +107,7 @@ void messageReceived(const uint8_t* macAddr, const uint8_t* incomingData, int le
 }
 
 
-void setup() {
-    uint8_t n = 0;
-    Serial.begin(115200);
-    Serial.setTimeout(10);
-
-    for (n = 0; n < 6; n++) {
-        pinMode(col_pins[n], OUTPUT);
-        digitalWrite(col_pins[n], 1);
-    }
-    pinMode(row_pins[0], INPUT_PULLUP);
-    pinMode(row_pins[1], INPUT_PULLUP);
-    pinMode(row_pins[2], INPUT_PULLUP);
-    pinMode(row_pins[3], INPUT);
-
-    fspi.begin(36, 37, 35, TFT_CS);
-    tft.begin(78000000);
-
+void display_clear() {
     tft.fillScreen(ILI9341_BLACK);
     tft.setRotation(3);
     tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
@@ -139,13 +126,57 @@ void setup() {
     tft.setCursor(10, 10 + 2 * PSTEP);
     tft.print("Z: ");
     tft.setTextColor(ILI9341_YELLOW, ILI9341_BLACK);
-    tft.setCursor(10, 10 + 3 * PSTEP);
-    tft.print("A: ");
-    tft.setCursor(10, 10 + 4 * PSTEP);
-    tft.print("B: ");
-    tft.setCursor(10, 10 + 5 * PSTEP);
-    tft.print("C: ");
+    if ((rx_data.values.stats & (1<<0)) == 0) {
+        tft.setCursor(10, 10 + 3 * PSTEP);
+        tft.print("A: ");
+        tft.setCursor(10, 10 + 4 * PSTEP);
+        tft.print("B: ");
+        tft.setCursor(10, 10 + 5 * PSTEP);
+        tft.print("C: ");
+    } else {
+        tft.setTextSize(2);
+        tft.setCursor(10, 10 + 3 * PSTEP);
+        tft.print("Speed:  ");
+        tft.setCursor(10, 10 + 4 * PSTEP);
+        tft.print("Tool#:  ");
+    }
+    tft.setTextSize(3);
     tft.setCursor(10, 10 + 6 * PSTEP);
+
+    uint8_t n = 0;
+    for (n = 0; n < 6; n++) {
+        last_values.pos[n] = rx_data.values.pos[n] + 1;
+    }
+    last_values.stats = rx_data.values.stats + 1;
+    last_values.aux = rx_data.values.aux + 1;
+    last_values.leds = rx_data.values.leds + 1;
+    last_values.ow_feed = rx_data.values.ow_feed + 1;
+    last_values.ow_rapid = rx_data.values.ow_rapid + 1;
+    last_values.ow_spindle = rx_data.values.ow_spindle + 1;
+    last_values.jog_scale = rx_data.values.jog_scale + 1;
+    last_values.spindle_speed = rx_data.values.spindle_speed + 1;
+    last_values.tool = rx_data.values.tool + 1;
+
+}
+
+void setup() {
+    uint8_t n = 0;
+    Serial.begin(115200);
+    Serial.setTimeout(10);
+
+    for (n = 0; n < 6; n++) {
+        pinMode(col_pins[n], OUTPUT);
+        digitalWrite(col_pins[n], 1);
+    }
+    pinMode(row_pins[0], INPUT_PULLUP);
+    pinMode(row_pins[1], INPUT_PULLUP);
+    pinMode(row_pins[2], INPUT_PULLUP);
+    pinMode(row_pins[3], INPUT);
+
+    fspi.begin(36, 37, 35, TFT_CS);
+    tft.begin(78000000);
+
+    display_clear();
 
     r1.begin(13, 12, CLICKS_PER_STEP);
     r2.begin(16, 17, CLICKS_PER_STEP);
@@ -155,8 +186,6 @@ void setup() {
     timerAttachInterrupt(timer, &handleLoop, true);
     timerAlarmWrite(timer, 100, true);
     timerAlarmEnable(timer);
-
-
 
     WiFi.mode(WIFI_STA);
     esp_wifi_set_mac(WIFI_IF_STA, myAddress);
@@ -176,17 +205,6 @@ void setup() {
         //Serial.println("Failed to add peer");
         return;
     }
-
-
-    for (n = 0; n < 6; n++) {
-        last_values.pos[n] = rx_data.values.pos[n] + 1;
-        last_values.leds = rx_data.values.leds;
-    }
-    last_values.ow_feed = rx_data.values.ow_feed + 1;
-    last_values.ow_rapid = rx_data.values.ow_rapid + 1;
-    last_values.ow_spindle = rx_data.values.ow_spindle + 1;
-    last_values.jog_scale = rx_data.values.jog_scale + 1;
-
 
 }
 
@@ -298,21 +316,19 @@ void loop() {
 
     }
 
-    tft.setTextSize(3);
+    tft.setTextSize(2);
     tft.setTextColor(ILI9341_LIGHTGREY, ILI9341_BLACK);
 
-    tft.setTextSize(3);
-    tft.setCursor(10, 5 + 4 * 45 + 25);
-    if ((rx_data.values.leds & (1<<6)) != 0) {
+    tft.setCursor(2, 5 + 4 * 45 + 25);
+    if ((rx_data.values.stats & (1<<1)) != 0) {
         tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
         tft.print("On  ");
     } else {
         tft.setTextColor(ILI9341_RED, ILI9341_BLACK);
         tft.print("Off ");
     }
-    tft.setTextSize(3);
-    tft.setCursor(81, 5 + 4 * 45 + 25);
-    if ((rx_data.values.leds & (1<<7)) != 0) {
+    tft.setCursor(65, 5 + 4 * 45 + 25);
+    if ((rx_data.values.stats & (1<<2)) != 0) {
         tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
         tft.print("RUN  ");
     } else {
@@ -320,20 +336,99 @@ void loop() {
         tft.print("STOP ");
     }
 
+    tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
+    tft.setCursor(142, 5 + 4 * 45 + 25);
+    if ((rx_data.values.stats & (1<<3)) != 0) {
+        tft.print("AUTO ");
+    } else if ((rx_data.values.stats & (1<<4)) != 0) {
+        tft.print("MAN  ");
+    } else if ((rx_data.values.stats & (1<<5)) != 0) {
+        tft.print("MDI  ");
+    } else {
+        tft.setTextColor(ILI9341_RED, ILI9341_BLACK);
+        tft.print(" --  ");
+    }
 
-    for (n = 0; n < 6; n++) {
-        if (last_values.leds != rx_data.values.leds || last_values.pos[n] != rx_data.values.pos[n]) {
-            last_values.pos[n] = rx_data.values.pos[n];
-            if ((rx_data.values.leds & (1<<(8+n))) != 0) {
-                tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
-            } else {
-                tft.setTextColor(ILI9341_RED, ILI9341_BLACK);
+    uint8_t num_axis = 6;
+    // display-mode
+    if ((rx_data.values.stats & (1<<0)) == 0) {
+        if (last_mode != 0) {
+            last_mode = 0;
+            display_clear();
+        }
+        // axis positions and homed
+        tft.setTextSize(3);
+        for (n = 0; n < 6; n++) {
+            if (last_values.leds != rx_data.values.leds || last_values.pos[n] != rx_data.values.pos[n]) {
+                last_values.pos[n] = rx_data.values.pos[n];
+                if ((rx_data.values.leds & (1<<(8+n))) != 0) {
+                    tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
+                } else {
+                    tft.setTextColor(ILI9341_RED, ILI9341_BLACK);
+                }
+                tft.setCursor(50, 10 + n * PSTEP);
+                sprintf(tmp_str, "%08.2f", rx_data.values.pos[n]);
+                tft.print(tmp_str);
             }
-            tft.setCursor(50, 10 + n * PSTEP);
-            sprintf(tmp_str, "%08.2f", rx_data.values.pos[n]);
+            last_values.leds = rx_data.values.leds;
+        }
+    } else {
+        if (last_mode != 1) {
+            last_mode = 1;
+            display_clear();
+        }
+        // axis positions and homed
+        tft.setTextSize(3);
+        for (n = 0; n < 3; n++) {
+            if (last_values.leds != rx_data.values.leds || last_values.pos[n] != rx_data.values.pos[n]) {
+                last_values.pos[n] = rx_data.values.pos[n];
+                if ((rx_data.values.leds & (1<<(8+n))) != 0) {
+                    tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
+                } else {
+                    tft.setTextColor(ILI9341_RED, ILI9341_BLACK);
+                }
+                tft.setCursor(50, 10 + n * PSTEP);
+                sprintf(tmp_str, "%08.2f", rx_data.values.pos[n]);
+                tft.print(tmp_str);
+            }
+            last_values.leds = rx_data.values.leds;
+        }
+
+        // coolant mist/flood
+        tft.setTextSize(2);
+        tft.setCursor(40, 10 + 5 * PSTEP + 2);
+        if ((rx_data.values.stats & (1<<6)) != 0) {
+            tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
+        } else {
+            tft.setTextColor(ILI9341_DARKGREY, ILI9341_BLACK);
+        }
+        tft.print("mist");
+
+        tft.setCursor(115, 10 + 5 * PSTEP);
+        if ((rx_data.values.stats & (1<<7)) != 0) {
+            tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
+        } else {
+            tft.setTextColor(ILI9341_DARKGREY, ILI9341_BLACK);
+        }
+        tft.print("flood");
+
+
+        // speed / tool
+        tft.setTextSize(3);
+        tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
+        if (last_values.spindle_speed != rx_data.values.spindle_speed) {
+            tft.setCursor(105, 10 + 3 * PSTEP);
+            sprintf(tmp_str, "%05.0f", rx_data.values.spindle_speed * 60.0);
             tft.print(tmp_str);
         }
-        last_values.leds = rx_data.values.leds;
+        last_values.spindle_speed = rx_data.values.spindle_speed;
+
+        if (last_values.tool != rx_data.values.tool) {
+            tft.setCursor(105, 10 + 4 * PSTEP);
+            sprintf(tmp_str, "  %03.0f", (float)(rx_data.values.tool));
+            tft.print(tmp_str);
+        }
+        last_values.tool = rx_data.values.tool;
     }
 
     if (last_values.ow_feed != rx_data.values.ow_feed) {

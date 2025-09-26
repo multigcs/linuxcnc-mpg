@@ -12,9 +12,19 @@ from struct import pack, unpack
 parser = argparse.ArgumentParser()
 parser.add_argument("--device", "-d", help="device", type=str, default="/dev/ttyACM0")
 parser.add_argument("--baud", "-b", help="baudrate", type=int, default=115200)
-parser.add_argument("--test", "-t", help="test mode / no hal needed", default=False, action="store_true")
-parser.add_argument("--scaler", "-s", help="scale selctor", default=False, action="store_true")
-parser.add_argument("--leds", "-l", help="disable axis selection / led control by hal", default=False, action="store_true")
+parser.add_argument(
+    "--test", "-t", help="test mode / no hal needed", default=False, action="store_true"
+)
+parser.add_argument(
+    "--scaler", "-s", help="scale selctor", default=False, action="store_true"
+)
+parser.add_argument(
+    "--leds",
+    "-l",
+    help="disable axis selection / led control by hal",
+    default=False,
+    action="store_true",
+)
 args = parser.parse_args()
 
 # setup
@@ -110,6 +120,14 @@ if not args.test:
         h.newpin("jog-scale", hal.HAL_FLOAT, hal.HAL_IN)
     h.newpin("machine.is-on", hal.HAL_BIT, hal.HAL_IN)
     h.newpin("program.is-running", hal.HAL_BIT, hal.HAL_IN)
+    h.newpin("display-mode", hal.HAL_BIT, hal.HAL_IN)
+    h.newpin("mode.is-auto", hal.HAL_BIT, hal.HAL_IN)
+    h.newpin("mode.is-manual", hal.HAL_BIT, hal.HAL_IN)
+    h.newpin("mode.is-mdi", hal.HAL_BIT, hal.HAL_IN)
+    h.newpin("coolant-mist", hal.HAL_BIT, hal.HAL_IN)
+    h.newpin("coolant-flood", hal.HAL_BIT, hal.HAL_IN)
+    h.newpin("tool-number", hal.HAL_S32, hal.HAL_IN)
+    h.newpin("spindle.speed", hal.HAL_FLOAT, hal.HAL_IN)
     h.newpin("connected", hal.HAL_BIT, hal.HAL_OUT)
     h.newpin("csum", hal.HAL_BIT, hal.HAL_OUT)
     h.newpin("header", hal.HAL_BIT, hal.HAL_OUT)
@@ -145,6 +163,17 @@ else:
     h["jog-scale"] = 0.01
     h["machine.is-on"] = True
     h["program.is-running"] = False
+
+    h["display-mode"] = False
+    h["mode.is-auto"] = False
+    h["mode.is-manual"] = False
+    h["mode.is-mdi"] = False
+
+    h["coolant-mist"] = False
+    h["coolant-flood"] = False
+    h["tool-number"] = 0
+    h["spindle.speed"] = 0.0
+
     h["connected"] = False
     h["csum"] = False
     h["header"] = False
@@ -187,14 +216,27 @@ while True:
         for ln, name in enumerate(LED_NAMES):
             if h[f"led.{name}"]:
                 leds |= 1 << ln
-
-        if h["machine.is-on"]:
-            leds |= 1 << 6
-        if h["program.is-running"]:
-            leds |= 1 << 7
         for num, axis in enumerate(AXIS):
             if h[f"axis.{axis}.homed"]:
                 leds |= 1 << (8 + num)
+
+        stats = 0
+        if h["display-mode"]:
+            stats |= 1 << 0
+        if h["machine.is-on"]:
+            stats |= 1 << 1
+        if h["program.is-running"]:
+            stats |= 1 << 2
+        if h["mode.is-auto"]:
+            stats |= 1 << 3
+        if h["mode.is-manual"]:
+            stats |= 1 << 4
+        if h["mode.is-mdi"]:
+            stats |= 1 << 5
+        if h["coolant-mist"]:
+            stats |= 1 << 6
+        if h["coolant-flood"]:
+            stats |= 1 << 7
 
         # serial sync
         #        while ser.inWaiting() > 0:
@@ -209,8 +251,10 @@ while True:
             data += pack("<h", int(h[f"override.{name}.value"] * 100.0))
         data += pack("<H", int(leds))
         data += pack("<f", h["jog-scale"])
-        data += pack("<f", 0.0)
-        data += pack("<f", 0.0)
+        data += pack("<f", h["spindle.speed"])
+        data += pack("<H", int(stats))
+        data += pack("<B", int(h["tool-number"]))
+        data += pack("<B", int(0))
         data += bytes([sum(data[4:]) & 255])
 
         ser.write(bytes(data))
@@ -223,7 +267,12 @@ while True:
                 print([int(byte) for byte in msgFromServer])
 
         if msgFromServer and len(msgFromServer) == RX_SIZE + 5:
-            if int(msgFromServer[0]) == 123 and int(msgFromServer[1]) == 234 and int(msgFromServer[2]) == 222 and int(msgFromServer[3]) == 111:
+            if (
+                int(msgFromServer[0]) == 123
+                and int(msgFromServer[1]) == 234
+                and int(msgFromServer[2]) == 222
+                and int(msgFromServer[3]) == 111
+            ):
                 if args.test:
                     print("HEADER OK")
                 h["header"] = True
@@ -250,7 +299,9 @@ while True:
             jog_diff = unpack("<h", bytes(msgFromServer[bpos : bpos + 2]))[0]
             bpos += 2
             for name in OVERWRITES:
-                h[f"override.{name}.counts"] = unpack("<h", bytes(msgFromServer[bpos : bpos + 2]))[0]
+                h[f"override.{name}.counts"] = unpack(
+                    "<h", bytes(msgFromServer[bpos : bpos + 2])
+                )[0]
                 bpos += 2
             buttons = unpack("<I", bytes(msgFromServer[bpos : bpos + 4]))[0]
             bpos += 4
@@ -296,7 +347,9 @@ while True:
                 h[f"button.{name}-toggle-not"] = not h[f"button.{name}-toggle"]
                 if BUTTON_HAS_LONG[num]:
                     h[f"button.{name}-long-not"] = not h[f"button.{name}-long"]
-                    h[f"button.{name}-long-toggle-not"] = not h[f"button.{name}-long-toggle"]
+                    h[f"button.{name}-long-toggle-not"] = not h[
+                        f"button.{name}-long-toggle"
+                    ]
 
             # select resolution
             if args.scaler:
@@ -319,8 +372,8 @@ while True:
 
             # print halpins in testmode
             if args.test:
-                #for key, value in h.items():
-                #    print(key, value)
+                for key, value in h.items():
+                    print(key, value)
 
                 # loop back for testing
                 for axis in AXIS:
