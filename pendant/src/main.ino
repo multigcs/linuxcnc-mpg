@@ -135,9 +135,9 @@ void display_clear() {
         tft.print("C: ");
     } else {
         tft.setTextSize(2);
-        tft.setCursor(10, 10 + 3 * PSTEP);
+        tft.setCursor(10, 10 + 4 * PSTEP + 4);
         tft.print("Speed:  ");
-        tft.setCursor(10, 10 + 4 * PSTEP);
+        tft.setCursor(10, 10 + 5 * PSTEP + 4);
         tft.print("Tool#:  ");
     }
     tft.setTextSize(3);
@@ -395,8 +395,8 @@ void loop() {
         }
 
         // coolant mist/flood
-        tft.setTextSize(2);
-        tft.setCursor(40, 10 + 5 * PSTEP + 2);
+        tft.setTextSize(1);
+        tft.setCursor(90, 10 + 5 * PSTEP - 1);
         if ((rx_data.values.stats & (1<<6)) != 0) {
             tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
         } else {
@@ -404,7 +404,7 @@ void loop() {
         }
         tft.print("mist");
 
-        tft.setCursor(115, 10 + 5 * PSTEP);
+        tft.setCursor(90, 10 + 5 * PSTEP + 10);
         if ((rx_data.values.stats & (1<<7)) != 0) {
             tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
         } else {
@@ -412,19 +412,18 @@ void loop() {
         }
         tft.print("flood");
 
-
-        // speed / tool
+        // speed
         tft.setTextSize(3);
         tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
         if (last_values.spindle_speed != rx_data.values.spindle_speed) {
-            tft.setCursor(105, 10 + 3 * PSTEP);
+            tft.setCursor(105, 10 + 4 * PSTEP);
             sprintf(tmp_str, "%05.0f", rx_data.values.spindle_speed * 60.0);
             tft.print(tmp_str);
         }
         last_values.spindle_speed = rx_data.values.spindle_speed;
-
+        // tool
         if (last_values.tool != rx_data.values.tool) {
-            tft.setCursor(105, 10 + 4 * PSTEP);
+            tft.setCursor(105, 10 + 5 * PSTEP);
             sprintf(tmp_str, "  %03.0f", (float)(rx_data.values.tool));
             tft.print(tmp_str);
         }
