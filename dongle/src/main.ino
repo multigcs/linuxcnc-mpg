@@ -43,7 +43,20 @@ union tx_Data_t{
     tx_data_t values;
     byte data[tx_data_t_size];
 };
-tx_Data_t tx_data;  
+tx_Data_t tx_data;
+
+struct ltx_data_t {
+    int16_t analog[3];
+    uint8_t buttons;
+    uint8_t stats;
+};
+const int ltx_data_t_size = sizeof(ltx_data_t);
+
+union ltx_Data_t{
+    ltx_data_t values;
+    byte data[ltx_data_t_size];
+};
+ltx_Data_t ltx_data;
 
 
 esp_now_peer_info_t peerInfo;
@@ -61,6 +74,7 @@ void messageReceived(const uint8_t* macAddr, const uint8_t* incomingData, int le
 void setup() {
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, 1);
+    pinMode(33, INPUT_PULLUP);
 
     Serial.begin(115200);
     // delay(1000); // uncomment if your serial monitor is empty
@@ -86,32 +100,28 @@ void setup() {
     }
 }
 
+uint8_t response = 0;
 uint8_t rx_start_pos = 0;
 void loop() {
     uint8_t csum = 0;
     uint8_t n = 0;
     uint8_t rx_buffer[rx_data_t_size];
-    uint8_t tx_buffer[tx_data_t_size + 5];
+    uint8_t tx_buffer[tx_data_t_size + ltx_data_t_size + 5];
+
+    tx_buffer[0] = 123;
+    tx_buffer[1] = 234;
+    tx_buffer[2] = 222;
+    tx_buffer[3] = 111;
 
     if (rx_ok == 1) {
         rx_ok = 0;
         digitalWrite(LED_PIN, 1);
-        tx_buffer[0] = 123;
-        tx_buffer[1] = 234;
-        tx_buffer[2] = 222;
-        tx_buffer[3] = 111;
-        csum = 0;
         for (n = 0; n < tx_data_t_size; n++) {
             tx_buffer[4 + n] = tx_data.data[n];
-            csum += tx_data.data[n];
         }
-        tx_buffer[4 + n] = csum;
-
-        Serial.write(tx_buffer, tx_data_t_size + 5);
     } else {
         digitalWrite(LED_PIN, 0);
     }
-
 
     while (Serial.available() > 0) {
         uint8_t c = Serial.read();
@@ -142,11 +152,42 @@ void loop() {
                     if (result != ESP_OK) {
                     }
                 }
+                response = 1;
             }
         } else {
             rx_start_pos = 0;
             Serial.println("sync error");
         }
+    }
+    if (response == 1) {
+        response = 0;
+        analogSetClockDiv(40);
+        uint32_t adc0 = 0;
+        uint32_t adc1 = 0;
+        uint32_t adc2 = 0;
+        for (n = 0; n < 100; n++) {
+            adc0 += analogRead(35);
+            adc1 += analogRead(34);
+            adc2 += analogRead(39);
+        }
+        ltx_data.values.analog[0] = adc0 / 100;
+        ltx_data.values.analog[1] = adc1 / 100;
+        ltx_data.values.analog[2] = adc2 / 100;
+        ltx_data.values.buttons = 0;
+        if (digitalRead(33) == 0) {
+            ltx_data.values.buttons |= (1<<0);
+        }
+        
+        for (n = 0; n < ltx_data_t_size; n++) {
+            tx_buffer[4 + tx_data_t_size + n] = ltx_data.data[n];
+        }
+
+        csum = 0;
+        for (n = 0; n < 4 + tx_data_t_size + ltx_data_t_size; n++) {
+            csum += tx_buffer[n];
+        }
+        tx_buffer[4 + tx_data_t_size + ltx_data_t_size] = csum;
+        Serial.write(tx_buffer, tx_data_t_size + ltx_data_t_size + 5);
     }
 
     delay(1);
